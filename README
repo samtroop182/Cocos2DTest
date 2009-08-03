@@ -1,0 +1,11 @@
+Just a sample application to learn how to use cocos2d, including
+- Game (from official tutorial)
+- Hello Event (from official tutorial)
+- TicTacToe (my sample)
+
+Based on Cocos2D for iPhone v0.8rc. I haven't changes any of the original source under Support directory.
+
+Licensed under custom GNU LGPL(same as original cocos2d). For more information, see:
+http://cocos2d-iphone.googlecode.com/svn/trunk/LICENSE
+http://www.cocos2d-iphone.org/wiki/doku.php/license
+
