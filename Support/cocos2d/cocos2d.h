@@ -51,7 +51,7 @@
 #import "PointParticleSystem.h"
 #import "QuadParticleSystem.h"
 #import "ParticleExamples.h"
-#import "Primitives.h"
+#import "DrawingPrimitives.h"
 #import "Scene.h"
 #import "Scheduler.h"
 #import "Sprite.h"
@@ -72,6 +72,7 @@
 #import "AtlasSpriteManager.h"
 #import "BitmapFontAtlas.h"
 #import "ParallaxNode.h"
+#import "ActionManager.h"
 
 //
 // cocos2d macros

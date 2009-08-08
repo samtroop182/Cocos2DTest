@@ -11,28 +11,20 @@
 @implementation Cocos2DTestAppDelegate
 
 - (void)applicationDidFinishLaunching:(UIApplication *)application {    
-
-	UIWindow* window = [[UIWindow alloc]initWithFrame:[[UIScreen mainScreen] bounds]];
-	
-	// ステータスバーを消したい人は、YES
-	[[UIApplication sharedApplication] setStatusBarHidden:YES];
-
-	// Windowに関する設定
-	[window setUserInteractionEnabled: YES];
-	// マルチタッチを有効にする
-	[window setMultipleTouchEnabled: YES];
-	// 横で起動
-	[[Director sharedDirector ] setDeviceOrientation:CCDeviceOrientationLandscapeRight];
-	// Directorにゲームウィンドウをアタッチする
-	[[Director sharedDirector ] attachInWindow:window];
-	
-	[window makeKeyAndVisible];
-	
-	/* :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
-	/* ユーザー毎の設定 */
-	/* :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
-	MenuScene* ms = [MenuScene node]; // メニューシーンのノード取得
-	[[Director sharedDirector] runWithScene:ms]; // Directorで再生する
+    
+    UIWindow* window = [[UIWindow alloc]initWithFrame:[[UIScreen mainScreen] bounds]];
+    
+    [[UIApplication sharedApplication] setStatusBarHidden:YES];
+    
+    [window setUserInteractionEnabled: YES];
+    [window setMultipleTouchEnabled: YES];
+    [[Director sharedDirector ] setDeviceOrientation:CCDeviceOrientationLandscapeRight];
+    [[Director sharedDirector ] attachInWindow:window];
+    
+    [window makeKeyAndVisible];
+    
+    MenuScene* ms = [MenuScene node];
+    [[Director sharedDirector] runWithScene:ms];
 }
 
 @end

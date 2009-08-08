@@ -49,11 +49,22 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 	context = NULL;
 	ALCdevice		*newDevice = NULL;
 	
-	_buffers = new ALuint[CD_MAX_BUFFERS];
-	_sources = new ALuint[CD_MAX_SOURCES];
+	//_buffers = new ALuint[CD_MAX_BUFFERS];
+	_buffers = (ALuint *)malloc( sizeof(_buffers[0]) * CD_MAX_BUFFERS );
+	if(!_buffers) {
+		CCLOG(@"Denshion: buffer memory allocation failed");
+		return FALSE;
+	}
+	
+	//_sources = new ALuint[CD_MAX_SOURCES];
+	_sources = (ALuint *)malloc( sizeof(_sources[0]) * CD_MAX_SOURCES );
+	if(!_sources) {
+		CCLOG(@"Denshion: source memory allocation failed");
+		return FALSE;
+	}
 	
 	// Create a new OpenAL Device
-	// Pass NULL to specify the system’s default output device
+	// Pass NULL to specify the system's default output device
 	newDevice = alcOpenDevice(NULL);
 	if (newDevice != NULL)
 	{
@@ -96,9 +107,9 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 	
 
 	CCLOG(@"Denshion: Deallocing sound engine.");
-	delete _bufferStates;
-	delete _channelGroups;
-	delete _sourceBufferAttachments;
+	free(_bufferStates);
+	free(_channelGroups);
+	free(_sourceBufferAttachments);
 	
 	// Delete the Sources
     alDeleteSources(CD_MAX_SOURCES, _sources);
@@ -120,8 +131,8 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
     //Close device
     alcCloseDevice(device);
 	
-	delete _buffers;
-	delete _sources;
+	free(_buffers);
+	free(_sources);
 	[super dealloc];
 }	
 
@@ -154,7 +165,12 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 		}	
 		
 		//Set up channel groups
-		_channelGroups = new channelGroup[channelGroupTotal];
+		//_channelGroups = new channelGroup[channelGroupTotal];
+		_channelGroups = (channelGroup *)malloc( sizeof(_channelGroups[0]) * channelGroupTotal);
+		if(!_channelGroups) {
+			CCLOG(@"Denshion: channel groups memory allocation failed");
+		}
+		
 		_channelGroupTotal = channelGroupTotal;
 		int channelCount = 0;
 		for (int i=0; i < channelGroupTotal; i++) {
@@ -162,6 +178,7 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 			_channelGroups[i].startIndex = channelCount;
 			_channelGroups[i].endIndex = _channelGroups[i].startIndex + channelGroupDefinitions[i] - 1;
 			_channelGroups[i].currentIndex = _channelGroups[i].startIndex;
+			_channelGroups[i].mute = false;
 			channelCount += channelGroupDefinitions[i];
 			CCLOG(@"Denshion: channel def %i %i %i %i",i,_channelGroups[i].startIndex, _channelGroups[i].endIndex, _channelGroups[i].currentIndex);
 		}
@@ -170,12 +187,21 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 		_channelTotal = channelCount;
 		
 		//Set up buffer states
-		_bufferStates = new int[CD_MAX_BUFFERS];
+		//_bufferStates = new int[CD_MAX_BUFFERS];
+		_bufferStates = (int *)malloc( sizeof(_bufferStates[0]) * CD_MAX_BUFFERS);
+		if(!_bufferStates) {
+			CCLOG(@"Denshion: buffer states memory allocation failed");
+		}
+		
 		for (int i=0; i < CD_MAX_BUFFERS; i++) {
 			_bufferStates[i] = CD_BS_EMPTY;
 		}	
 		
-		_sourceBufferAttachments = new ALuint[CD_MAX_SOURCES];
+		//_sourceBufferAttachments = new ALuint[CD_MAX_SOURCES];
+		_sourceBufferAttachments = (ALuint *)malloc( sizeof(_sourceBufferAttachments[0]) * CD_MAX_SOURCES);
+		if(!_sourceBufferAttachments) {
+			CCLOG(@"Denshion: source buffer attachments memory allocation failed");
+		}
 		
 		// Initialize our OpenAL environment
 		if ([self _initOpenAL]) {
@@ -267,7 +293,7 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
  * Load sound data for later play back.
  * @return TRUE if buffer loaded okay for play back otherwise false
  */
-- (BOOL) loadBuffer:(int) soundId fileName:(NSString*) fileName fileType:(NSString*) fileType
+- (BOOL) loadBuffer:(int) soundId filePath:(NSString*) filePath
 {
 	
 	ALenum  format;
@@ -275,7 +301,7 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 	ALsizei size;
 	ALsizei freq;
 	
-	CCLOG(@"Denshion: Loading openAL buffer %i %@",soundId,fileName);
+	CCLOG(@"Denshion: Loading openAL buffer %i %@", soundId, filePath);
 	
 #ifdef DEBUG
 	//Sanity check parameters - only in DEBUG
@@ -287,14 +313,14 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 		//OpenAL initialisation has previously failed
 		CCLOG(@"Denshion: Loading buffer failed because sound engine state != functioning");
 		return FALSE;
-	}	
+	}
 
 	CFURLRef fileURL = nil;
-	NSString * path = [[NSBundle mainBundle] pathForResource:fileName ofType:fileType];
+	NSString *path = [FileUtils fullPathFromRelativePath:filePath];
 	if (path) {
 		fileURL = (CFURLRef)[[NSURL fileURLWithPath:path] retain];
 	}
-	
+
 	if (fileURL)
 	{
 		if (_bufferStates[soundId] != CD_BS_EMPTY) {
@@ -392,7 +418,7 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 #endif
 	
 	//If mute or initialisation has failed or buffer is not loaded then do nothing
-	if (_mute || !functioning || _bufferStates[soundId] != CD_BS_LOADED) {
+	if (_mute || !functioning || _bufferStates[soundId] != CD_BS_LOADED || _channelGroups[channelGroupId].mute) {
 #ifdef DEBUG
 		if (!functioning) {
 			CCLOG(@"Denshion: sound playback aborted because sound engine is not functioning");
@@ -512,7 +538,33 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 		_channelGroups[channelGroupId].currentIndex = _channelGroups[channelGroupId].startIndex;
 	}	
 }
- 
+
+/**
+ * Set the mute property for a channel group. If mute is turned on any sounds in that channel group
+ * will be stopped and further sounds in that channel group will play. However, turning mute off
+ * will not restart any sounds that were playing when mute was turned on. Also the mute setting 
+ * for the sound engine must be taken into account. If the sound engine is mute no sounds will play
+ * no matter what the channel group mute setting is.
+ */
+- (void) setChannelGroupMute:(int) channelGroupId mute:(BOOL) mute {
+	if (mute) {
+		_channelGroups[channelGroupId].mute = true;
+		[self stopChannelGroup:channelGroupId];
+	} else {
+		_channelGroups[channelGroupId].mute = false;	
+	}	
+}
+
+/**
+ * Return the mute property for the channel group identified by channelGroupId
+ */
+- (BOOL) channelGroupMute:(int) channelGroupId {
+	if (_channelGroups[channelGroupId].mute) {
+		return YES;
+	} else {
+		return NO;	
+	}	
+}
 
 -(ALCcontext *) openALContext {
 	return context;
@@ -594,6 +646,12 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 	alSourcefv(sourceId, AL_POSITION, sourcePosAL);
 }
 
+- (void) setLooping:(BOOL) newLoopingValue {
+	lastLooping = newLoopingValue;
+	alSourcei(sourceId, AL_LOOPING, newLoopingValue);
+}
+
+
 - (BOOL) isPlaying {
 	ALint state;
 	alGetSourcei(sourceId, AL_SOURCE_STATE, &state);
@@ -618,6 +676,10 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 
 - (float) gain {
 	return lastGain;
+}	
+
+- (BOOL) looping {
+	return lastLooping;
 }	
 
 @end
@@ -647,7 +709,7 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 		float increment = 1.0f / [_loadRequests count];
 		//Iterate over load request and load
 		for (CDBufferLoadRequest *loadRequest in _loadRequests) {
-			[_soundEngine loadBuffer:loadRequest.soundId fileName:loadRequest.fileName fileType:nil];
+			[_soundEngine loadBuffer:loadRequest.soundId filePath:loadRequest.filePath];
 			_soundEngine.asynchLoadProgress += increment;
 			
 		}	
@@ -670,24 +732,22 @@ extern void interruptionListenerCallback (void *inUserData, UInt32 interruptionS
 ///////////////////////////////////////////////////////////////////////////////////////
 @implementation CDBufferLoadRequest
 
-@synthesize fileName, soundId;
+@synthesize filePath, soundId;
 
--(id) init:(int) theSoundId fileName:(NSString *) theFileName {
+-(id) init:(int) theSoundId filePath:(NSString *) theFilePath {
 	if ([super init]) {
 		soundId = theSoundId;
-		fileName = theFileName;
-		[fileName retain];
+		filePath = theFilePath;
+		[filePath retain];
 		return self;
 	} else {
 		return nil;
-	}	
-}	
+	}
+}
 
 -(void) dealloc {
-	[fileName release];
+	[filePath release];
 	[super dealloc];
-}	
+}
 
 @end
-
-

@@ -14,7 +14,6 @@
 
 
 #import "Action.h"
-#import "CocosNode.h"
 #import "ccMacros.h"
 
 #import "IntervalAction.h"
@@ -50,10 +49,15 @@
 	[super dealloc];
 }
 
+-(NSString*) description
+{
+	return [NSString stringWithFormat:@"<%@ = %08X | Tag = %i>", [self class], self, tag];
+}
+
 -(id) copyWithZone: (NSZone*) zone
 {
 	Action *copy = [[[self class] allocWithZone: zone] init];
-	copy.target = target;
+	[copy setTarget: target];
 	copy.tag = tag;
 	return copy;
 }
@@ -135,7 +139,7 @@
 -(void) start
 {
 	[super start];
-	other.target = target;
+	[other setTarget: target];
 	[other start];
 }
 
@@ -198,8 +202,14 @@
 -(void) start
 {
 	[super start];
-	other.target = target;
+	[other setTarget: target];
 	[other start];
+}
+
+-(void) stop
+{
+	[other stop];
+	[super stop];
 }
 
 -(void) step:(ccTime) dt

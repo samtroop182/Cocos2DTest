@@ -46,7 +46,6 @@ float realBackgroundMusicVolume = -1.0f;
 @implementation CDAsynchInitialiser
 
 -(void) main {
-	CCLOG(@"CDAsychInitialiser is initialising audio manager");
 	[super main];
 	[CDAudioManager sharedManager];
 }	
@@ -71,7 +70,8 @@ static BOOL configured = FALSE;
 				//Set defaults here
 				configuredMode = kAudioManagerFxPlusMusicIfNoOtherAudio;
 				//Just create one channel group with all the sources
-				configuredChannelGroupDefinitions = new int[1];
+				//configuredChannelGroupDefinitions = new int[1];
+				configuredChannelGroupDefinitions = (int *)malloc( sizeof(configuredChannelGroupDefinitions[0]) * 1);
 				configuredChannelGroupDefinitions[0] = CD_MAX_SOURCES;
 				configuredChannelGroupTotal = 1;
 			}
@@ -117,7 +117,13 @@ static BOOL configured = FALSE;
  */
 + (void) configure: (tAudioManagerMode) mode channelGroupDefinitions:(int[]) channelGroupDefinitions channelGroupTotal:(int) channelGroupTotal {
 	configuredMode = mode;
-	configuredChannelGroupDefinitions = new int[channelGroupTotal];
+	//configuredChannelGroupDefinitions = new int[channelGroupTotal];
+	//NB: memory leak here if configure is called more than once, it is not intended to be used that way though (SO).
+	configuredChannelGroupDefinitions = (int *)malloc( sizeof(configuredChannelGroupDefinitions[0]) * channelGroupTotal);
+	if(!configuredChannelGroupDefinitions) {
+		CCLOG(@"Denshion: configuredChannelGroupDefinitions memory allocation failed");
+	}
+	
 	for (int i=0; i < channelGroupTotal; i++) {
 		configuredChannelGroupDefinitions[i] = channelGroupDefinitions[i];
 	}	
@@ -133,6 +139,9 @@ static BOOL configured = FALSE;
 	
 		_mode = mode;
 		backgroundMusicCompletionSelector = nil;
+		_isObservingAppEvents = FALSE;
+		_systemPausedMusic = FALSE;
+		_muteStoppedMusic = FALSE;
 		
 		switch (_mode) {
 				
@@ -170,8 +179,18 @@ static BOOL configured = FALSE;
 				
 				break;
 		}
+		
 		//Set audio session category
+		if (willPlayBackgroundMusic) {
+			//Work around to ensure background music is not decoded in software
+			//on OS 3.0. Thanks to Bryan Acceleroto (SO 2009.07.02)
+			UInt32 fakeCategory = kAudioSessionCategory_MediaPlayback;
+			AudioSessionSetProperty(kAudioSessionProperty_AudioCategory, sizeof(fakeCategory), &fakeCategory);
+			AudioSessionSetActive(TRUE);
+			AudioSessionSetActive(FALSE);
+		}	
 		AudioSessionSetProperty(kAudioSessionProperty_AudioCategory, sizeof(_audioSessionCategory), &_audioSessionCategory);
+		AudioSessionSetActive(TRUE);
 		soundEngine = [[CDSoundEngine alloc] init:channelGroupDefinitions channelGroupTotal:channelGroupTotal];
 	}	
 	return self;		
@@ -179,8 +198,11 @@ static BOOL configured = FALSE;
 
 -(void) dealloc {
 	[self stopBackgroundMusic];
-	[lastBackgroundMusicFilename release];
+	[lastBackgroundMusicFilePath release];
 	[soundEngine release];
+	if (_isObservingAppEvents) {
+		[[NSNotificationCenter defaultCenter] removeObserver:self];
+	}	
 	[super dealloc];
 }	
 
@@ -192,54 +214,69 @@ static BOOL configured = FALSE;
 	}	
 }	
 
+-(BOOL) mute {
+	return _mute;
+}	
+
+/**
+ * Setting mute to true will stop all sounds currently playing and prevent further sounds from playing.
+ * If background music was playing when sound was muted it will be resumed when sound is unmuted.
+ */
+-(void) setMute:(BOOL) muteValue {
+	
+	[soundEngine setMute:muteValue];
+	_mute = muteValue;
+	if (_mute) {
+		if ([self isBackgroundMusicPlaying]) {
+			[self stopBackgroundMusic:FALSE];
+			_muteStoppedMusic = TRUE;
+		} else {
+			_muteStoppedMusic = FALSE;
+		}	
+	} else {
+		if (_muteStoppedMusic) {
+			[self resumeBackgroundMusic];
+			_muteStoppedMusic = FALSE;
+		}	
+	}	
+}	
+
 //Load background music ready for playing
--(void) preloadBackgroundMusic:(NSString*) filename
+-(void) preloadBackgroundMusic:(NSString*) filePath
 {
 	if (!willPlayBackgroundMusic) {
 		CCLOG(@"Denshion: preload background music aborted because audio is not exclusive");
 		return;
 	}	
 	
-	if (![filename isEqualToString:lastBackgroundMusicFilename]) {
-		CCLOG(@"Denshion: preloading new or different background music file");
+	if (![filePath isEqualToString:lastBackgroundMusicFilePath]) {
+		CCLOG(@"Denshion: loading new or different background music file %@", filePath);
 		if(backgroundMusic != nil)
 		{
-			[self stopBackgroundMusic];
+			[self stopBackgroundMusic:TRUE];
 		}
-		NSString * path = [[NSBundle mainBundle] pathForResource:filename ofType:nil];
+		NSString *path = [FileUtils fullPathFromRelativePath:filePath];
 		backgroundMusic = [[AVAudioPlayer alloc] initWithContentsOfURL:[NSURL fileURLWithPath:path] error:NULL];
-		
+
 		if (backgroundMusic != nil) {
 			[backgroundMusic prepareToPlay];
 			backgroundMusic.delegate = self;
 		}	
-		lastBackgroundMusicFilename = [filename copy];
+		lastBackgroundMusicFilePath = [filePath copy];
 	}	
 }	
 
--(void) playBackgroundMusic:(NSString*) filename loop:(BOOL) loop
+-(void) playBackgroundMusic:(NSString*) filePath loop:(BOOL) loop
 {
-	
-	if (!willPlayBackgroundMusic) {
-		CCLOG(@"Denshion: play background music aborted because audio is not exclusive");
+	if (!willPlayBackgroundMusic || _mute) {
+		CCLOG(@"Denshion: play bgm aborted because audio is not exclusive or sound is muted");
 		return;
 	}	
 	
-	if (![filename isEqualToString:lastBackgroundMusicFilename]) {
-		CCLOG(@"Denshion: playing new or different background music file");
-		if(backgroundMusic != nil)
-		{
-			[self stopBackgroundMusic];
-		}
-		NSString * path = [[NSBundle mainBundle] pathForResource:filename ofType:nil];
-		backgroundMusic = [[AVAudioPlayer alloc] initWithContentsOfURL:[NSURL fileURLWithPath:path] error:NULL];
-		
-		if (backgroundMusic != nil) {
-			backgroundMusic.numberOfLoops = (loop ? -1:0);
-			[backgroundMusic play];
-			backgroundMusic.delegate = self;
-		}	
-		lastBackgroundMusicFilename = [filename copy];
+	if (![filePath isEqualToString:lastBackgroundMusicFilePath]) {
+		[self preloadBackgroundMusic:filePath];		
+		backgroundMusic.numberOfLoops = (loop ? -1:0);
+		[backgroundMusic play];
 	} else {
 		CCLOG(@"Denshion: request to play current background music file");
 		[self pauseBackgroundMusic];
@@ -257,13 +294,22 @@ static BOOL configured = FALSE;
 	}	
 }
 
+//Kept for backwards compatibility with 1.5 interface
 -(void) stopBackgroundMusic
+{
+	[self stopBackgroundMusic:TRUE];
+}
+
+//@param release - if TRUE AVAudioPlayer instance will be released
+-(void) stopBackgroundMusic:(BOOL) release
 {
 	if (backgroundMusic != nil) {
 		[backgroundMusic stop];
-		[backgroundMusic autorelease];
-		backgroundMusic = nil;
-		lastBackgroundMusicFilename = nil;
+		if (release) {
+			[backgroundMusic autorelease];
+			backgroundMusic = nil;
+			lastBackgroundMusicFilePath = nil;
+		}	
 	}	
 }
 
@@ -301,6 +347,86 @@ static BOOL configured = FALSE;
 	backgroundMusicCompletionListener = listener;
 	backgroundMusicCompletionSelector = selector;
 }	
+
+/*
+ * Call this method to have the audio manager automatically handle application resign and
+ * become active.  Pass a tAudioManagerResignBehavior to indicate the desired behavior
+ * for resigning and becoming active again.
+ *
+ * Based on idea of Dominique Bongard
+ */
+-(void) setResignBehavior:(tAudioManagerResignBehavior) resignBehavior autoHandle:(BOOL) autoHandle { 
+
+	if (!_isObservingAppEvents && autoHandle) {
+		[[NSNotificationCenter defaultCenter] addObserver:self	selector:@selector(applicationWillResignActive:) name:@"UIApplicationWillResignActiveNotification" object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self	selector:@selector(applicationDidBecomeActive:) name:@"UIApplicationDidBecomeActiveNotification" object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self	selector:@selector(applicationWillTerminate:) name:@"UIApplicationWillTerminateNotification" object:nil];
+		_isObservingAppEvents = TRUE;
+	}
+	_resignBehavior = resignBehavior;
+}	
+
+//Called when application resigns active only if setResignBehavior has been called 
+- (void) applicationWillResignActive:(NSNotification *) notification
+{
+	
+	switch (_resignBehavior) {
+
+		case kAMRBStopPlay:
+			if (backgroundMusic.isPlaying) {
+				_systemPausedMusic = TRUE;
+				[self stopBackgroundMusic:FALSE];
+			} else {
+				//Music is either paused or stopped, if it is paused it will be restarted
+				//by OS so we will stop it.
+				_systemPausedMusic = FALSE;
+				[self stopBackgroundMusic:FALSE];
+			}	
+			break;
+			
+		case kAMRBStop:	
+			//Stop music regardless of whether it is playing or not because if it was paused
+			//then the OS would resume it
+			[self stopBackgroundMusic:FALSE];
+			
+		default:
+			break;
+
+	}			
+	
+	CCLOG(@"Denshion: audio manager handling resign active");
+}
+
+//Called when application becomes active only if setResignBehavior has been called 
+- (void) applicationDidBecomeActive:(NSNotification *) notification
+{
+
+	switch (_resignBehavior) {
+			
+		case kAMRBStopPlay:
+			if (_systemPausedMusic) {
+				//Music had been stopped but stop maintains current time
+				//so playing again will continue from where music was before resign active
+				[self resumeBackgroundMusic];
+				_systemPausedMusic = FALSE;
+			}	
+			break;
+			
+		default:
+			break;
+			
+	}		
+	CCLOG(@"Denshion: audio manager handling become active");
+	
+}
+
+//Called when application terminates only if setResignBehavior has been called 
+- (void) applicationWillTerminate:(NSNotification *) notification
+{
+	CCLOG(@"Denshion: audio manager handling terminate");
+	[self stopBackgroundMusic];
+}
+
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {
 	CCLOG(@"Denshion: audio player finished");
@@ -360,9 +486,7 @@ static BOOL configured = FALSE;
     alcProcessContext([soundEngine openALContext]); 
 	if((error = alGetError()) != AL_NO_ERROR) {
 		CCLOG(@"Denshion: Error processing context%x\n", error);
-	} 
-
-} 
+	}
+}
 
 @end
-

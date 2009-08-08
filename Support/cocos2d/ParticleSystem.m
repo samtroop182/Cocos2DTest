@@ -25,7 +25,6 @@
 
 // cocos2d
 #import "ParticleSystem.h"
-#import "Primitives.h"
 #import "TextureMgr.h"
 #import "ccMacros.h"
 
@@ -35,7 +34,7 @@
 
 @implementation ParticleSystem
 @synthesize active, duration;
-@synthesize source, posVar;
+@synthesize centerOfGravity, posVar;
 @synthesize particleCount;
 @synthesize life, lifeVar;
 @synthesize angle, angleVar;
@@ -52,6 +51,7 @@
 @synthesize blendFunc = blendFunc_;
 @synthesize blendAdditive;
 @synthesize positionType = positionType_;
+@synthesize autoRemoveOnFinish = autoRemoveOnFinish_;
 
 -(id) init {
 	NSException* myException = [NSException
@@ -87,12 +87,14 @@
 		// blend function
 		blendFunc_ = (ccBlendFunc) { CC_BLEND_SRC, CC_BLEND_DST };
 		
-		// default position type;
-		positionType_ = kPositionTypeWorld;
+		// default movement type;
+		positionType_ = kPositionTypeFree;
 		
 		// default: modulate
 		// XXX: not used
 	//	colorModulate = YES;
+		
+		autoRemoveOnFinish_ = NO;
 
 		[self schedule:@selector(step:)];
 	}
@@ -128,8 +130,8 @@
 
 	// position
 	// XXX: source should be deprecated.
-	particle->pos.x = (int) (source.x + posVar.x * CCRANDOM_MINUS1_1());
-	particle->pos.y = (int) (source.y + posVar.y * CCRANDOM_MINUS1_1());
+	particle->pos.x = (int) (centerOfGravity.x + posVar.x * CCRANDOM_MINUS1_1());
+	particle->pos.y = (int) (centerOfGravity.y + posVar.y * CCRANDOM_MINUS1_1());
 	
 	// direction
 	float a = CC_DEGREES_TO_RADIANS( angle + angleVar * CCRANDOM_MINUS1_1() );

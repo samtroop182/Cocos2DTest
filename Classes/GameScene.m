@@ -13,15 +13,15 @@
 
 -(id) init
 {
-	if(self = [super init])
-	{
+    if(self = [super init])
+    {
         // cpv = cpVect = Chipmunk vector
-		Sprite* bg = [Sprite spriteWithFile:@"game.png"];
-		[bg setPosition:cpv(240,160)];
-		[self addChild:bg z:0];
-		[self addChild:[GameLayer node] z:1];
-	}
-	return self;
+        Sprite* bg = [Sprite spriteWithFile:@"game.png"];
+        [bg setPosition:cpv(240,160)];
+        [self addChild:bg z:0];
+        [self addChild:[GameLayer node] z:1];
+    }
+    return self;
 }
 
 @end
@@ -32,7 +32,7 @@
 - (id)init
 {
     if(self = [super init])
-	{
+    {
         CGSize size = [[Director sharedDirector] winSize];
         Sprite *ship = [Sprite spriteWithFile:@"ship.png"];
         ship.position = ccp(0, 50);
@@ -45,16 +45,16 @@
         id sequence = [Sequence actions:fordward, backwards, nil];
         id repeat = [Repeat actionWithAction:sequence times:2];
         [ship runAction:repeat];
-		isTouchEnabled = YES;
-	}
-	return self;
+        isTouchEnabled = YES;
+    }
+    return self;
 }
 
 - (BOOL)ccTouchesEnded:(NSSet*)touches withEvent:(UIEvent *)event
 {
-	MenuScene* ms = [MenuScene node];
-	[[Director sharedDirector] replaceScene:ms];
-	return kEventHandled;
+    MenuScene* ms = [MenuScene node];
+    [[Director sharedDirector] replaceScene:ms];
+    return kEventHandled;
 }
 
 @end

@@ -35,8 +35,8 @@ Example:
 */
 @interface IntervalAction: FiniteTimeAction <NSCopying>
 {
-	struct timeval lastUpdate;
 	ccTime elapsed;
+	BOOL	firstTick;
 }
 
 @property (readonly) ccTime elapsed;
@@ -250,7 +250,7 @@ typedef struct _ccBezierConfig {
 -(id) initWithDuration: (ccTime)duration blinks:(unsigned int)blinks;
 @end
 
-/** Fades in a CocosNode that implements the CocosNodeOpacity protocol, from opacity 0 to 255.
+/** Fades In an object that implements the CocosNodeRGBA protocol. It modifies the opacity from 0 to 255.
  The "reverse" of this action is FadeOut
  */
 @interface FadeIn : IntervalAction <NSCopying>
@@ -258,7 +258,7 @@ typedef struct _ccBezierConfig {
 }
 @end
 
-/** Fades out a CocosNode that implements the CocosNodeOpacity protocol, from opacity 255 to 0.
+/** Fades Out an object that implements the CocosNodeRGBA protocol. It modifies the opacity from 255 to 0.
  The "reverse" of this action is FadeIn
 */
 @interface FadeOut : IntervalAction <NSCopying>
@@ -266,7 +266,7 @@ typedef struct _ccBezierConfig {
 }
 @end
 
-/** Fades a CocosNode that implements the CocosNodeOpacity protocol from current opacity to a custom one.
+/** Fades an object that implements the CocosNodeRGBA protocol. It modifies the opacity from the current value to a custom one.
  @warning This action doesn't support "reverse"
  */
 @interface FadeTo : IntervalAction <NSCopying>
@@ -286,12 +286,12 @@ typedef struct _ccBezierConfig {
 */
 @interface TintTo : IntervalAction <NSCopying>
 {
-	GLubyte toR, toG, toB;
-	GLubyte fromR, fromG, fromB;
+	ccColor3B to;
+	ccColor3B from;
 }
-/** creates an action with duration and opactiy */
+/** creates an action with duration and color */
 +(id) actionWithDuration:(ccTime)duration red:(GLubyte)red green:(GLubyte)green blue:(GLubyte)blue;
-/** initializes the action with duration and opacity */
+/** initializes the action with duration and color */
 -(id) initWithDuration:(ccTime)duration red:(GLubyte)red green:(GLubyte)green blue:(GLubyte)blue;
 @end
 
@@ -303,9 +303,9 @@ typedef struct _ccBezierConfig {
 	GLshort deltaR, deltaG, deltaB;
 	GLshort fromR, fromG, fromB;
 }
-/** creates an action with duration and opactiy */
+/** creates an action with duration and color */
 +(id) actionWithDuration:(ccTime)duration red:(GLshort)deltaRed green:(GLshort)deltaGreen blue:(GLshort)deltaBlue;
-/** initializes the action with duration and opacity */
+/** initializes the action with duration and color */
 -(id) initWithDuration:(ccTime)duration red:(GLshort)deltaRed green:(GLshort)deltaGreen blue:(GLshort)deltaBlue;
 @end
 

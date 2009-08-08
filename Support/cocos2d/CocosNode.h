@@ -73,7 +73,7 @@ enum {
 	// If YES the transformtions will be relative to (-transform.x, -transform.y).
 	// Sprites, Labels and any other "small" object uses it.
 	// Scenes, Layers and other "whole screen" object don't use it.
-	BOOL relativeTransformAnchor_;
+	BOOL relativeAnchorPoint_;
 	
 	// transformation anchor point
 	CGPoint transformAnchor_;
@@ -112,13 +112,7 @@ enum {
 	
 	// a tag. any number you want to assign to the node
 	int tag;
-	
-	// actions
-	struct ccArray *actions;
-	int actionIndex;
-	Action *currentAction;
-	BOOL currentActionSalvaged;
-	
+
 	// scheduled selectors
 	NSMutableDictionary *scheduledSelectors;    
 }
@@ -165,20 +159,20 @@ enum {
 @property (readwrite) CGSize contentSize;
 /** A weak reference to the parent */
 @property(readwrite,assign) CocosNode* parent;
-/** If YES the transformtions will be relative to (-transform.x, -transform.y).
- * Sprites, Labels and any other sizeble object use it.
- * Scenes, Layers and other "whole screen" object don't use it.
+/** If YES the transformtions will be relative to it's anchor point.
+ * Sprites, Labels and any other sizeble object use it have it enabled by default.
+ * Scenes, Layers and other "whole screen" object don't use it, have it disabled by default.
  */
-@property(readwrite,assign) BOOL relativeTransformAnchor;
+@property(readwrite,assign) BOOL relativeAnchorPoint;
 /** A tag used to identify the node easily */
 @property(readwrite,assign) int tag;
-/** An array with the children */
-@property (readonly) NSArray *children;
 
 // initializators
-//! creates a node
+/** allocates and initializes a node.
+ The node will be created as "autorelease".
+ */
 +(id) node;
-//! initializes the node
+/** initializes the node */
 -(id) init;
 
 
@@ -243,10 +237,18 @@ enum {
  */
 -(CocosNode*) getChildByTag:(int) tag;
 
+/** Returns the array that contains all the children */
+- (NSArray *)children;
+
 /** Reorders a child according to a new z value.
  * The child MUST be already added.
  */
 -(void) reorderChild:(CocosNode*)child z:(int)zOrder;
+
+/** Stops all running actions and schedulers
+ @since v0.8
+ */
+-(void) cleanup;
 
 // draw
 
@@ -324,18 +326,22 @@ enum {
 
 // transformation methods
 
-/// actual affine transforms used
-/// XXX: needs documentation
-/// @since v0.7.1
+/** actual affine transforms used
+ @todo nodeToParentTransform needs documentation
+ @since v0.7.1
+ */
 - (CGAffineTransform)nodeToParentTransform;
-/// XXX: needs documentation
-/// @since v0.7.1
+/** @todo parentToNodeTransform needs documentation
+ @since v0.7.1
+ */
 - (CGAffineTransform)parentToNodeTransform;
-/// XXX: needs documentation
-/// @since v0.7.1
+/** @todo nodeToWorldTransform needs documentation
+ @since v0.7.1
+ */
 - (CGAffineTransform)nodeToWorldTransform;
-/// XXX: needs documentation
-/// @since v0.7.1
+/** @todo worldToNodeTransform needs documentation
+ @since v0.7.1
+ */
 - (CGAffineTransform)worldToNodeTransform;
 /** converts a world coordinate to local coordinate
  @since v0.7.1
@@ -355,12 +361,14 @@ enum {
  @since v0.7.1
  */
 - (CGPoint)convertToWorldSpaceAR:(CGPoint)nodePoint;
-// convenience methods which take a UITouch instead of CGPoint
-/// XXX: needs documentation
-/// @since v0.7.1
+/** convenience methods which take a UITouch instead of CGPoint
+ @todo convertTouchToNodeSpace needs documentation
+ @since v0.7.1
+ */
 - (CGPoint)convertTouchToNodeSpace:(UITouch *)touch;
-/// XXX: needs documentation
-/// @since v0.7.1
+/** @todo convertTouchToNodeSpaceAR needs documentation
+ @since v0.7.1
+ */
 - (CGPoint)convertTouchToNodeSpaceAR:(UITouch *)touch;
 @end
 
@@ -370,17 +378,15 @@ enum {
 
 /// CocosNode RGBA protocol
 @protocol CocosNodeRGBA <NSObject>
-/** set the color of the node
- * example:  [node setRGB: 255:128:24];  or  [node setRGB:0xff:0x88:0x22];
- @since v0.7.1
+/** sets Color
+ @since v0.8
  */
--(void) setRGB: (GLubyte)r :(GLubyte)g :(GLubyte)b;
-/// The red component of the node's color.
--(GLubyte) r;
-/// The green component of the node's color.
--(GLubyte) g;
-/// The blue component of the node's color.
--(GLubyte) b;
+-(void) setColor:(ccColor3B)color;
+/** returns the color
+ @since v0.8
+ */
+-(ccColor3B) color;
+
 /// returns the opacity
 -(GLubyte) opacity;
 /** sets the opacity.
@@ -399,7 +405,24 @@ enum {
  @since v0.8
  */
  -(BOOL) doesOpacityModifyRGB;
-
+/** set the color of the node
+ * example:  [node setRGB: 255:128:24];  or  [node setRGB:0xff:0x88:0x22];
+ @since v0.7.1
+ @deprecated Will be removed in v0.9. Use setColor instead.
+ */
+-(void) setRGB: (GLubyte)r :(GLubyte)g :(GLubyte)b __attribute__((deprecated));
+/** The red component of the node's color
+ @deprecated Will be removed in v0.9. Use color instead
+ */
+-(GLubyte) r __attribute__((deprecated));
+/** The green component of the node's color.
+ @deprecated Will be removed in v0.9. Use color instead
+ */
+-(GLubyte) g __attribute__((deprecated));
+/** The blue component of the node's color.
+ @deprecated Will be removed in v0.9. Use color instead
+ */
+-(GLubyte) b __attribute__((deprecated));
 @end
 
 

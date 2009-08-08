@@ -22,16 +22,15 @@ enum {
 	kActionTagInvalid = -1,
 };
 
-@class CocosNode;
 /** Base class for actions
  */
 @interface Action : NSObject <NSCopying> {
-	CocosNode *target;
-	int tag;
+	id	target;
+	int	tag;
 }
 
 /** The "target". The action will modify the target properties */
-@property (readwrite,assign) CocosNode *target;
+@property (readwrite,assign) id target;
 /** The action tag. An identifier of the action */
 @property (readwrite,assign) int tag;
 

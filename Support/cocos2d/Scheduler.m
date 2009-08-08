@@ -56,10 +56,11 @@
 		NSAssert(sig !=0 , @"Signature not found for selector - does it have the following form? -(void) name: (ccTime) dt");
 #endif
 		
+		// target is being retained. Be careful with ciruclar references
 		target = [t retain];
 		selector = s;
 		impMethod = (TICK_IMP) [t methodForSelector:s];
-		
+		elapsed = -1;
 		interval = seconds;
 	}
 	return self;
@@ -68,14 +69,16 @@
 -(void) dealloc
 {
 	CCLOG( @"deallocing %@", self);
-	
 	[target release];
 	[super dealloc];
 }
 
 -(void) fire: (ccTime) dt
 {
-	elapsed += dt;
+	if( elapsed == - 1)
+		elapsed = 0;
+	else
+		elapsed += dt;
 	if( elapsed >= interval ) {
 		impMethod(target, selector, elapsed);
 		elapsed = 0;
@@ -89,6 +92,8 @@
 @implementation Scheduler
 
 static Scheduler *sharedScheduler;
+
+@synthesize timeScale = timeScale_;
 
 + (Scheduler *)sharedScheduler
 {
@@ -117,12 +122,13 @@ static Scheduler *sharedScheduler;
 
 - (id) init
 {
-	if( ! (self=[super init]) )
-		return nil;
-	
-	scheduledMethods = [[NSMutableArray arrayWithCapacity:50] retain];
-	methodsToRemove = [[NSMutableArray arrayWithCapacity:20] retain];
-	methodsToAdd = [[NSMutableArray arrayWithCapacity:20] retain];
+	if( (self=[super init]) ) {
+		scheduledMethods = [[NSMutableArray arrayWithCapacity:50] retain];
+		methodsToRemove = [[NSMutableArray arrayWithCapacity:20] retain];
+		methodsToAdd = [[NSMutableArray arrayWithCapacity:20] retain];
+		
+		timeScale_ = 1.0f;
+	}
 
 	return self;
 }
@@ -133,28 +139,9 @@ static Scheduler *sharedScheduler;
 	[scheduledMethods release];
 	[methodsToRemove release];
 	[methodsToAdd release];
+	sharedScheduler = nil;
 	
 	[super dealloc];
-}
-
--(Timer*) scheduleTarget: (id) target selector:(SEL)sel
-{
-	Timer *t = [Timer timerWithTarget:target selector:sel];
-	
-	[methodsToAdd addObject: t];
-	
-	return t;
-}
-
--(Timer*) scheduleTarget: (id) target selector:(SEL)sel interval:(ccTime) i
-{
-	Timer *t = [Timer timerWithTarget:target selector:sel];
-	
-	[t setInterval:i];
-	
-	[methodsToAdd addObject: t];
-	
-	return t;
 }
 
 -(void) scheduleTimer: (Timer*) t
@@ -199,8 +186,18 @@ static Scheduler *sharedScheduler;
 	[methodsToRemove addObject:t];
 }
 
+-(void) unscheduleAllTimers
+{
+	[methodsToAdd removeAllObjects];
+	[methodsToRemove removeAllObjects];
+	[scheduledMethods removeAllObjects];
+}
+
 -(void) tick: (ccTime) dt
 {
+	if( timeScale_ != 1.0f )
+		dt *= timeScale_;
+
 	for( id k in methodsToRemove )
 		[scheduledMethods removeObject:k];
 

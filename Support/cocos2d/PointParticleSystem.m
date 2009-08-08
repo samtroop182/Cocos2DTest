@@ -126,7 +126,7 @@
 			// update values in point
 			//
 			CGPoint	newPos = p->pos;
-			if( positionType_ == kPositionTypeWorld ) {
+			if( positionType_ == kPositionTypeFree ) {
 				newPos = ccpSub(absolutePosition, p->startPos);
 				newPos = ccpSub( p->pos, newPos);
 			}
@@ -144,10 +144,15 @@
 			if( particleIdx != particleCount-1 )
 				particles[particleIdx] = particles[particleCount-1];
 			particleCount--;
+			
+			if( particleCount == 0 && autoRemoveOnFinish_ ) {
+				[self unschedule:@selector(step:)];
+				[[self parent] removeChild:self cleanup:YES];
+			}
 		}
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, verticesID);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(ccPointSprite)*totalParticles, vertices,GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(ccPointSprite)*particleCount, vertices,GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 

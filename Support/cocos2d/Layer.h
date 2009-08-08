@@ -36,6 +36,11 @@
 /** If isTouchEnabled, this method is called onEnter. Override it to change the
  way Layer receives touch events.
  ( Default: [[TouchDispatcher sharedDispatcher] addStandardDelegate:self priority:0] )
+ Example:
+     -(void) registerWithTouchDispatcher
+     {
+        [[TouchDispatcher sharedDispatcher] addTargetedDelegate:self priority:INT_MIN+1 swallowsTouches:YES];
+     }
  */
 -(void) registerWithTouchDispatcher;
 
@@ -49,48 +54,43 @@
 //
 // ColorLayer
 //
-/** ColorLayer is a subclass of Layer that implements the CocosNodeSize, CocosNodeOpacity and CocosNodeRGB protocol.
+/** ColorLayer is a subclass of Layer that implements the CocosNodeRGBA protocol.
  
  All features from Layer are valid, plus the following new features:
  - opacity
  - RGB colors
- - contentSize
  */
 @interface ColorLayer : Layer <CocosNodeRGBA>
 {
-	GLubyte r,g,b,opacity;
+	GLubyte		opacity_;
+	ccColor3B	color_;	
 	GLfloat squareVertices[4 * 2];
 	GLubyte squareColors[4 * 4];
 }
 
 /** creates the Layer with color, width and height */
-+ (id) layerWithColor: (GLuint) aColor width:(GLfloat)w height:(GLfloat)h;
++ (id) layerWithColor: (ccColor4B)color width:(GLfloat)w height:(GLfloat)h;
 /** creates the layer with color. Width and height are the window size. */
-+ (id) layerWithColor: (GLuint) aColor;
++ (id) layerWithColor: (ccColor4B)color;
 
 /** initializes a Layer with color, width and height */
-- (id) initWithColor: (GLuint) aColor width:(GLint)w height:(GLint)h;
+- (id) initWithColor:(ccColor4B)color width:(GLfloat)w height:(GLfloat)h;
 /** initializes a Layer with color. Width and height are the window size. */
-- (id) initWithColor: (GLuint) aColor;
-
-/** initializes the witdh and height of the layer */
-- (void) initWidth: (GLfloat)w height:(GLfloat)h;
-
-/** changes the color of the layer
- @deprecated Use CocosNodeRGB protocol instead
- */
-- (void) changeColor: (GLuint) aColor __attribute__ ((deprecated));
+- (id) initWithColor:(ccColor4B)color;
 
 /** change width */
 -(void) changeWidth: (GLfloat)w;
 /** change height */
 -(void) changeHeight: (GLfloat)h;
+/** change width and height
+ @since v0.8
+ */
+-(void) changeWidth:(GLfloat)w height:(GLfloat)h;
 
-/* deprecated */
-@property (readonly) GLuint color __attribute__ ((deprecated));
-
-/** conforms to CocosNodeRGB and CocosNodeOpacity protocol */
-@property (readonly) GLubyte r,g,b,opacity;
+/** Opacity: conforms to CocosNodeRGBA protocol */
+@property (readonly) GLubyte opacity;
+/** Opacity: conforms to CocosNodeRGBA protocol */
+@property (readonly) ccColor3B color;
 
 @end
 

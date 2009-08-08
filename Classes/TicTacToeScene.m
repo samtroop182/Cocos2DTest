@@ -20,7 +20,7 @@
     {
         // add background layer
         CGSize size = [[Director sharedDirector] winSize];
-        Layer* bg = [ColorLayer layerWithColor:0xffffffff width:size.width height:size.height];
+        Layer* bg = [ColorLayer layerWithColor:ccc4(0xff, 0xff, 0xff, 0xff) width:size.width height:size.height];
         [bg setPosition:ccp(0, 0)];
         [self addChild:bg z:0];
         
@@ -32,12 +32,12 @@
         
         // add menu item (back button)
         Label *label = [Label labelWithString:@"Back" fontName:@"Helvetica" fontSize:32.0];
-        [label setRGB:0x00 :0x10 :0x99];
+        [label setColor:ccc3(0x00, 0x10, 0x99)];
         MenuItem *back = [MenuItemLabel itemWithLabel:label target:self selector:@selector(back:)];
         Menu *menu = [Menu menuWithItems:back, nil];
-		[menu alignItemsVertically];
+        [menu alignItemsVertically];
         menu.position = ccp(40, 20);
-		[self addChild:menu z:2];
+        [self addChild:menu z:2];
         
         // add game board layer (pieces are placed on here)
         [self addChild:[TicTacToeLayer node] z:3];
@@ -47,9 +47,9 @@
 
 - (void)back:(id)sender
 {
-	MenuScene* scene = [MenuScene node];
+    MenuScene* scene = [MenuScene node];
     FadeTRTransition *transition = [FadeTRTransition transitionWithDuration:1.0 scene:scene];
-	[[Director sharedDirector] replaceScene:transition];
+    [[Director sharedDirector] replaceScene:transition];
 }
 
 @end
@@ -59,9 +59,9 @@
 - (id)init
 {
     if(self = [super init])
-	{
+    {
         // enable touches and accelerometer
-		isTouchEnabled = YES;
+        isTouchEnabled = YES;
         isAccelerometerEnabled = YES;
         
         // set current turn to maru
@@ -71,8 +71,8 @@
         lastAccerelometerVector = CGPointZero;
         
 
-	}
-	return self;
+    }
+    return self;
 }
 
 - (BOOL)ccTouchesBegan:(NSSet *)touches withEvent:(UIEvent *)event

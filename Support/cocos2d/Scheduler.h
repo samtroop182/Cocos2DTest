@@ -34,19 +34,24 @@ typedef void (*TICK_IMP)(id, SEL, ccTime);
 	ccTime elapsed;
 }
 
+/** interval in seconds */
 @property (readwrite,assign) ccTime interval;
 
-/** constructor for timer */
+/** Allocates a timer with a target and a selector.
+*/
 +(id) timerWithTarget:(id) t selector:(SEL)s;
 
-/** constructor for timer with interval */
-+(id) timerWithTarget:(id) t selector:(SEL)s interval:(ccTime) i;
+/** Allocates a timer with a target, a selector and an interval in seconds.
+*/
++(id) timerWithTarget:(id) t selector:(SEL)s interval:(ccTime)seconds;
 
-/** init for Timer */
--(id) initWithTarget:(id) t selector:(SEL)s;
+/** Initializes a timer with a target and a selector.
+*/
+ -(id) initWithTarget:(id) t selector:(SEL)s;
 
-/** init for Timer with interval */
--(id) initWithTarget:(id) t selector:(SEL)s interval:(ccTime) i;
+/** Initializes a timer with a target, a selector and an interval in seconds.
+*/
+-(id) initWithTarget:(id) t selector:(SEL)s interval:(ccTime)seconds;
 
 
 /** triggers the timer */
@@ -56,31 +61,46 @@ typedef void (*TICK_IMP)(id, SEL, ccTime);
 //
 // Scheduler
 //
-/**Class manages all the schedulers
+/** Scheduler is responsible of triggering the scheduled callbacks.
+ You should not use NSTimer. Instead use this class.
 */
 @interface Scheduler : NSObject
 {
-	NSMutableArray *scheduledMethods;
-	NSMutableArray *methodsToRemove;
-	NSMutableArray *methodsToAdd;
+	NSMutableArray	*scheduledMethods;
+	NSMutableArray	*methodsToRemove;
+	NSMutableArray	*methodsToAdd;
+	
+	ccTime			timeScale_;
 }
+
+/** Modifies the time of all scheduled callbacks.
+ You can use this property to create a 'slow motion' or 'fast fordward' effect.
+ Default is 1.0. To create a 'slow motion' effect, use values below 1.0.
+ To create a 'fast fordward' effect, use values higher than 1.0.
+ @since v0.8
+ @warning It will affect EVERY scheduled selector / action.
+ */
+@property (readwrite) ccTime	timeScale;
 
 /** returns a shared instance of the Scheduler */
 +(Scheduler *)sharedScheduler;
 
-/** the scheduler is ticked */
--(void) tick: (ccTime) dt;
+/** 'tick' the scheduler.
+ You should NEVER call this method, unless you know what you are doing.
+ */
+-(void) tick:(ccTime)dt;
 
-/** schedule a target/selector */
--(Timer*) scheduleTarget:(id) r selector:(SEL) s;
-
-/** schedule a target/selector with interval */
--(Timer*) scheduleTarget:(id) r selector:(SEL) s interval: (ccTime) i;
-
-
-/** schedule a Timer */
+/** schedules a Timer.
+ It will be fired in every frame.
+ */
 -(void) scheduleTimer: (Timer*) t;
 
-/** unschedule a timer */
+/** unschedules an already scheduled Timer */
 -(void) unscheduleTimer: (Timer*) t;
+
+/** unschedule all timers.
+ You should NEVER call this method, unless you know what you are doing.
+ @since v0.8
+ */
+-(void) unscheduleAllTimers;
 @end

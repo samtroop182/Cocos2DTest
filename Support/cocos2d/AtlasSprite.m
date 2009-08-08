@@ -19,6 +19,12 @@
 #pragma mark -
 #pragma mark AltasSprite
 
+#if 1
+#define RENDER_IN_SUBPIXEL
+#else
+#define RENDER_IN_SUBPIXEL (int)
+#endif
+
 enum {
 	kIndexNotInitialized = 0xffffffff,
 };
@@ -34,7 +40,7 @@ enum {
 @synthesize quad = quad_;
 @synthesize atlasIndex = atlasIndex_;
 @synthesize textureRect = rect_;
-@synthesize opacity=opacity_, r=r_, g=g_, b=b_;
+@synthesize opacity=opacity_, color=color_;
 
 +(id)spriteWithRect:(CGRect)rect spriteManager:(AtlasSpriteManager*)manager
 {
@@ -58,7 +64,8 @@ enum {
 		anchorPoint_ = ccp(0.5f, 0.5f);
 
 		// RGB and opacity
-		r_ = g_ = b_ = opacity_ = 255;
+		opacity_ = 255;
+		color_ = ccWHITE;
 		ccColor4B tmpColor = {255,255,255,255};
 		quad_.bl.colors = tmpColor;
 		quad_.br.colors = tmpColor;
@@ -166,10 +173,10 @@ enum {
 		float cy = x2 * sr + y2 * cr + y;
 		float dx = x1 * cr - y2 * sr + x;
 		float dy = x1 * sr + y2 * cr + y;
-		quad_.bl.vertices = (ccVertex3F) { (int)ax, (int)ay, vertexZ_ };
-		quad_.br.vertices = (ccVertex3F) { (int)bx, (int)by, vertexZ_ };
-		quad_.tl.vertices = (ccVertex3F) { (int)dx, (int)dy, vertexZ_ };
-		quad_.tr.vertices = (ccVertex3F) { (int)cx, (int)cy, vertexZ_ };
+		quad_.bl.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(ax), RENDER_IN_SUBPIXEL(ay), vertexZ_ };
+		quad_.br.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(bx), RENDER_IN_SUBPIXEL(by), vertexZ_ };
+		quad_.tl.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(dx), RENDER_IN_SUBPIXEL(dy), vertexZ_ };
+		quad_.tr.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(cx), RENDER_IN_SUBPIXEL(cy), vertexZ_ };
 		
 	}
 	
@@ -184,10 +191,11 @@ enum {
 		float x2 = (x1 + rect_.size.width * scaleX_);
 		float y2 = (y1 + rect_.size.height * scaleY_);
 
-		quad_.bl.vertices = (ccVertex3F) { (int)x1, (int)y1, vertexZ_ };
-		quad_.br.vertices = (ccVertex3F) { (int)x2, (int)y1, vertexZ_ };
-		quad_.tl.vertices = (ccVertex3F) { (int)x1, (int)y2, vertexZ_ };
-		quad_.tr.vertices = (ccVertex3F) { (int)x2, (int)y2, vertexZ_ };
+		quad_.bl.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x1), RENDER_IN_SUBPIXEL(y1), vertexZ_ };
+		quad_.br.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x2), RENDER_IN_SUBPIXEL(y1), vertexZ_ };
+		quad_.tl.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x1), RENDER_IN_SUBPIXEL(y2), vertexZ_ };
+		quad_.tr.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x2), RENDER_IN_SUBPIXEL(y2), vertexZ_ };
+		
 	}
 	
 	// update position
@@ -200,10 +208,11 @@ enum {
 		float x2 = (x1 + rect_.size.width);
 		float y2 = (y1 + rect_.size.height);
 
-		quad_.bl.vertices = (ccVertex3F) { (int)x1, (int)y1, vertexZ_ };
-		quad_.br.vertices = (ccVertex3F) { (int)x2, (int)y1, vertexZ_ };
-		quad_.tl.vertices = (ccVertex3F) { (int)x1, (int)y2, vertexZ_ };
-		quad_.tr.vertices = (ccVertex3F) { (int)x2, (int)y2, vertexZ_ };
+		quad_.bl.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x1), RENDER_IN_SUBPIXEL(y1), vertexZ_ };
+		quad_.br.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x2), RENDER_IN_SUBPIXEL(y1), vertexZ_ };
+		quad_.tl.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x1), RENDER_IN_SUBPIXEL(y2), vertexZ_ };
+		quad_.tr.vertices = (ccVertex3F) { RENDER_IN_SUBPIXEL(x2), RENDER_IN_SUBPIXEL(y2), vertexZ_ };
+		
 	}
 	
 	[textureAtlas_ updateQuad:&quad_ atIndex:atlasIndex_];
@@ -324,30 +333,34 @@ enum {
 	
 	// special opacity for premultiplied textures
 	if( opacityModifyRGB_ )
-		r_ = g_ = b_ = opacity_;
+		color_.r = color_.g = color_.b = opacity_;
 
-	ccColor4B color = (ccColor4B) {r_, g_, b_, opacity_ };
+	ccColor4B color4 = {color_.r, color_.g, color_.b, opacity_ };
 
-	quad_.bl.colors = color;
-	quad_.br.colors = color;
-	quad_.tl.colors = color;
-	quad_.tr.colors = color;
+	quad_.bl.colors = color4;
+	quad_.br.colors = color4;
+	quad_.tl.colors = color4;
+	quad_.tr.colors = color4;
 
 	[self updateColor];
 }
 
--(void) setRGB: (GLubyte)r :(GLubyte)g :(GLubyte)b
+-(void) setColor:(ccColor3B)color3
 {
-	r_ = r;
-	g_ = g;
-	b_ = b;
-	ccColor4B color = {r_, g_, b_, opacity_ };
-	quad_.bl.colors = color;
-	quad_.br.colors = color;
-	quad_.tl.colors = color;
-	quad_.tr.colors = color;
+	color_ = color3;
+	ccColor4B color4 = {color_.r, color_.g, color_.b, opacity_ };
+	quad_.bl.colors = color4;
+	quad_.br.colors = color4;
+	quad_.tl.colors = color4;
+	quad_.tr.colors = color4;
 	
 	[self updateColor];
+	
+}
+
+-(void) setRGB: (GLubyte)r :(GLubyte)g :(GLubyte)b
+{	
+	[self setColor:ccc3(r,g,b)];
 }
 -(void) setOpacityModifyRGB:(BOOL)modify
 {

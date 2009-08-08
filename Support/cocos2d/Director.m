@@ -20,6 +20,8 @@
 #import "TouchDelegateProtocol.h"
 #import "Camera.h"
 #import "Scheduler.h"
+#import "ActionManager.h"
+#import "TextureMgr.h"
 #import "LabelAtlas.h"
 #import "ccMacros.h"
 #import "ccExceptions.h"
@@ -65,6 +67,7 @@
 @synthesize pixelFormat=pixelFormat_;
 @synthesize nextDeltaTimeZero=nextDeltaTimeZero_;
 @synthesize deviceOrientation=deviceOrientation_;
+@synthesize isPaused=isPaused_;
 
 //
 // singleton stuff
@@ -107,28 +110,29 @@ static Director *_sharedDirector = nil;
 
 - (id) init
 {   
-	//Create a full-screen window
+	if( (self=[super init]) ) {
 
-	// default values
-	pixelFormat_ = kRGB565;
-	depthBufferFormat_ = 0;
+		// default values
+		pixelFormat_ = kRGB565;
+		depthBufferFormat_ = 0;
 
-	// scenes
-	runningScene_ = nil;
-	nextScene = nil;
-	
-	oldAnimationInterval = animationInterval = 1.0 / kDefaultFPS;
-	scenesStack_ = [[NSMutableArray arrayWithCapacity:10] retain];
-	
-	// landscape
-	deviceOrientation_ = CCDeviceOrientationPortrait;
+		// scenes
+		runningScene_ = nil;
+		nextScene = nil;
+		
+		oldAnimationInterval = animationInterval = 1.0 / kDefaultFPS;
+		scenesStack_ = [[NSMutableArray arrayWithCapacity:10] retain];
+		
+		// landscape
+		deviceOrientation_ = CCDeviceOrientationPortrait;
 
-	// FPS
-	displayFPS = NO;
-	frames = 0;
-	
-	// paused ?
-	paused = NO;
+		// FPS
+		displayFPS = NO;
+		frames = 0;
+		
+		// paused ?
+		isPaused_ = NO;
+	}
 
 	return self;
 }
@@ -137,7 +141,7 @@ static Director *_sharedDirector = nil;
 {
 	CCLOG( @"deallocing %@", self);
 
-#ifdef FAST_FPS_DISPLAY
+#if DIRECTOR_DISPLAY_FAST_FPS
 	[FPSLabel release];
 #endif
 	[runningScene_ release];
@@ -158,8 +162,9 @@ static Director *_sharedDirector = nil;
 	// set other opengl default values
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	
-#ifdef FAST_FPS_DISPLAY
-	FPSLabel = [[LabelAtlas labelAtlasWithString:@"00.0" charMapFile:@"fps_images.png" itemWidth:16 itemHeight:24 startCharMap:'.'] retain];
+#if DIRECTOR_DISPLAY_FAST_FPS
+    if (!FPSLabel)
+        FPSLabel = [[LabelAtlas labelAtlasWithString:@"00.0" charMapFile:@"fps_images.png" itemWidth:16 itemHeight:24 startCharMap:'.'] retain];
 #endif	
 }
 
@@ -173,7 +178,7 @@ static Director *_sharedDirector = nil;
 	
 	/* calculate "global" dt */
 	[self calculateDeltaTime];
-	if( ! paused )
+	if( ! isPaused_ )
 		[[Scheduler sharedScheduler] tick: dt];
 	
 	
@@ -426,16 +431,17 @@ static Director *_sharedDirector = nil;
 		}
 		
 		// set autoresizing enabled when attaching the glview to another view
-		[openGLView_ setAutoresizesEAGLSurface:YES];
-		
-		// set the touch delegate of the glview to self
-		[openGLView_ setTouchDelegate: [TouchDispatcher sharedDispatcher]];
+		[openGLView_ setAutoresizesEAGLSurface:YES];		
 	}
 	else
 	{
 		// set the (new) frame of the glview
 		[openGLView_ setFrame:rect];
 	}
+	
+	// set the touch delegate of the glview to self
+	[openGLView_ setTouchDelegate: [TouchDispatcher sharedDispatcher]];
+
 	
 	// check if the superview has touchs enabled and enable it in our view
 	if([view isUserInteractionEnabled])
@@ -487,8 +493,8 @@ static Director *_sharedDirector = nil;
 // convert a coordinate from uikit to opengl
 -(CGPoint)convertCoordinate:(CGPoint)p
 {
-	int newY = openGLView_.frame.size.height - p.y;
-	int newX = openGLView_.frame.size.width -p.x;
+	float newY = openGLView_.frame.size.height - p.y;
+	float newX = openGLView_.frame.size.width -p.x;
 	
 	CGPoint ret;
 	switch ( deviceOrientation_) {
@@ -637,21 +643,28 @@ static Director *_sharedDirector = nil;
 
 -(void) end
 {
+	[runningScene_ onExit];
+	[runningScene_ cleanup];
+	[runningScene_ release];
+
+	runningScene_ = nil;
+	nextScene = nil;
+	
 	// remove all objects, but don't release it.
 	// runWithScene might be executed after 'end'.
 	[scenesStack_ removeAllObjects];
 
-	[runningScene_ onExit];
-	[runningScene_ release];
-	runningScene_ = nil;
-	nextScene = nil;
-
 	// don't release the event handlers
 	// They are needed in case the director is run again
 	[[TouchDispatcher sharedDispatcher] removeAllDelegates];
-
+	
 	[self stopAnimation];
 	[self detach];
+	
+	// Purge all managers
+	[[Scheduler sharedScheduler] release];
+	[[ActionManager sharedManager] release];
+	[[TextureMgr sharedTextureMgr] release];
 }
 
 -(void) setNextScene
@@ -676,19 +689,19 @@ static Director *_sharedDirector = nil;
 
 -(void) pause
 {
-	if( paused )
+	if( isPaused_ )
 		return;
 
 	oldAnimationInterval = animationInterval;
 	
 	// when paused, don't consume CPU
 	[self setAnimationInterval:1/4.0];
-	paused = YES;
+	isPaused_ = YES;
 }
 
 -(void) resume
 {
-	if( ! paused )
+	if( ! isPaused_ )
 		return;
 	
 	[self setAnimationInterval: oldAnimationInterval];
@@ -701,7 +714,7 @@ static Director *_sharedDirector = nil;
 		@throw myException;
 	}
 	
-	paused = NO;
+	isPaused_ = NO;
 	dt = 0;
 }
 
@@ -744,7 +757,7 @@ static Director *_sharedDirector = nil;
 	}
 }
 
-#ifdef FAST_FPS_DISPLAY
+#if DIRECTOR_DISPLAY_FAST_FPS
 
 // display the FPS using a LabelAtlas
 // updates the FPS every frame
@@ -783,11 +796,13 @@ static Director *_sharedDirector = nil;
 	glEnable(GL_TEXTURE_2D);
 	glEnableClientState( GL_VERTEX_ARRAY);
 	glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	glColor4ub(224,224,244,200);
 	[texture drawAtPoint: ccp(5,2)];
 	[texture release];
 	
+	glBlendFunc(CC_BLEND_SRC, CC_BLEND_DST);
 	glDisable(GL_TEXTURE_2D);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -803,7 +818,11 @@ static Director *_sharedDirector = nil;
 
 - (id) init
 {
+#if DIRECTOR_FASTDIRECTOR_FAST_EVENTS
+	CCLOG(@"Using Fast Director with Fast Events");
+#else
 	CCLOG(@"Using Fast Director");
+#endif
 
 	if(( self = [super init] )) {
 		isRunning = NO;
@@ -846,7 +865,7 @@ static Director *_sharedDirector = nil;
 	[invocation setTarget:[Director sharedDirector]];
 	[invocation setSelector:selector];
 	[invocation performSelectorOnMainThread:@selector(invokeWithTarget:)
-								 withObject:[Director sharedDirector] waitUntilDone:NO];	
+								 withObject:[Director sharedDirector] waitUntilDone:NO];
 }
 
 -(void) preMainLoop
@@ -855,17 +874,23 @@ static Director *_sharedDirector = nil;
 	
 		NSAutoreleasePool *loopPool = [NSAutoreleasePool new];
 
-//		while( CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.004f, FALSE) == kCFRunLoopRunHandledSource);
+#if DIRECTOR_FASTDIRECTOR_FAST_EVENTS
+		while( CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.004f, FALSE) == kCFRunLoopRunHandledSource);
+#else
 		while(CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, TRUE) == kCFRunLoopRunHandledSource);
+#endif
 
-		if (paused) {
+		if (isPaused_) {
 			usleep(250000); // Sleep for a quarter of a second (250,000 microseconds) so that the framerate is 4 fps.
 		}
 		
 		[self mainLoop];
 
-//		while( CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.004f, FALSE) == kCFRunLoopRunHandledSource);
+#if DIRECTOR_FASTDIRECTOR_FAST_EVENTS
+		while( CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.004f, FALSE) == kCFRunLoopRunHandledSource);
+#else
 		while(CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, TRUE) == kCFRunLoopRunHandledSource);
+#endif
 
 		[loopPool release];
 	}	

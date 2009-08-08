@@ -170,7 +170,7 @@
 			//
 
 			CGPoint	newPos = p->pos;
-			if( positionType_ == kPositionTypeWorld ) {
+			if( positionType_ == kPositionTypeFree ) {
 				newPos = ccpSub(absolutePosition, p->startPos);
 				newPos = ccpSub( p->pos, newPos);
 			}
@@ -245,10 +245,15 @@
 			if( particleIdx != particleCount-1 )
 				particles[particleIdx] = particles[particleCount-1];
 			particleCount--;
+
+			if( particleCount == 0 && autoRemoveOnFinish_ ) {
+				[self unschedule:@selector(step:)];
+				[[self parent] removeChild:self cleanup:YES];
+			}
 		}
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, quadsID);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quads[0])*totalParticles, quads,GL_DYNAMIC_DRAW);	
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quads[0])*particleCount, quads,GL_DYNAMIC_DRAW);	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 

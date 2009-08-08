@@ -59,7 +59,7 @@
 -(void) start
 {
 	[super start];
-	target.visible = YES;
+	[target setVisible: YES];
 }
 -(FiniteTimeAction*) reverse
 {
@@ -74,7 +74,7 @@
 -(void) start
 {
 	[super start];
-	target.visible = NO;
+	[target setVisible: NO];
 }
 -(FiniteTimeAction*) reverse
 {
@@ -89,7 +89,8 @@
 -(void) start
 {
 	[super start];
-	target.visible = ! target.visible;
+	BOOL v = [target visible];
+	[target setVisible: !v];
 }
 @end
 
@@ -118,7 +119,7 @@
 -(void) start
 {
 	[super start];
-	target.position = position;
+	[target setPosition: position];
 }
 @end
 
@@ -181,6 +182,8 @@
 //
 @implementation CallFuncND
 
+@synthesize invocation = invocation_;
+
 +(id) actionWithTarget: (id) t selector:(SEL) s data:(void*) d
 {
 	return [[[self alloc] initWithTarget: t selector: s data:d] autorelease];
@@ -191,10 +194,9 @@
 	if( (self=[super initWithTarget:t selector:s]) ) {
 		data = d;	
 		NSMethodSignature * sig = [[t class] instanceMethodSignatureForSelector:s];
-		invocation = [NSInvocation invocationWithMethodSignature:sig];
-		[invocation setTarget:t];
-		[invocation setSelector:s];
-		[invocation retain];
+		self.invocation = [NSInvocation invocationWithMethodSignature:sig];
+		[invocation_ setTarget:t];
+		[invocation_ setSelector:s];
 	}
 	return self;
 }
@@ -208,14 +210,14 @@
 
 -(void) dealloc
 {
-	[invocation release];
+	[invocation_ release];
 	[super dealloc];
 }
 
 -(void) execute
 {
-	[invocation setArgument:&target atIndex:2];
-	[invocation setArgument:&data atIndex:3];
-	[invocation invoke];
+	[invocation_ setArgument:&target atIndex:2];
+	[invocation_ setArgument:&data atIndex:3];
+	[invocation_ invoke];
 }
 @end
