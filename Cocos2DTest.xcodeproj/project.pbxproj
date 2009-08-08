@@ -302,6 +302,7 @@
 		0EF03E79102D0CCB003FC1E8 /* CocosDenshion.m in Sources */ = {isa = PBXBuildFile; fileRef = 0E043A09102B10F600827BEE /* CocosDenshion.m */; };
 		0EF03E7B102D0CCB003FC1E8 /* SimpleAudioEngine.m in Sources */ = {isa = PBXBuildFile; fileRef = 0E043A0B102B10F600827BEE /* SimpleAudioEngine.m */; };
 		0EF03E7D102D0D04003FC1E8 /* libcocosdenshion.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EF03E61102D0C71003FC1E8 /* libcocosdenshion.a */; };
+		0EF03EA1102D19B5003FC1E8 /* libisimulate.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EF03EA0102D19B5003FC1E8 /* libisimulate.a */; };
 		AD7E039A0FE9734B0000E41C /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD7E03780FE9734B0000E41C /* AddressBook.framework */; };
 		AD7E039B0FE9734B0000E41C /* AddressBookUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD7E03790FE9734B0000E41C /* AddressBookUI.framework */; };
 		AD7E039D0FE9734B0000E41C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD7E037B0FE9734B0000E41C /* AudioToolbox.framework */; };
@@ -696,6 +697,7 @@
 		0EF03DF9102D0896003FC1E8 /* bell.aif */ = {isa = PBXFileReference; lastKnownFileType = file; path = bell.aif; sourceTree = "<group>"; };
 		0EF03DFA102D0896003FC1E8 /* gong.aif */ = {isa = PBXFileReference; lastKnownFileType = file; path = gong.aif; sourceTree = "<group>"; };
 		0EF03E61102D0C71003FC1E8 /* libcocosdenshion.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libcocosdenshion.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		0EF03EA0102D19B5003FC1E8 /* libisimulate.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libisimulate.a; sourceTree = "<group>"; };
 		1D3623240D0F684500981E51 /* Cocos2DTestAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Cocos2DTestAppDelegate.h; sourceTree = "<group>"; };
 		1D3623250D0F684500981E51 /* Cocos2DTestAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Cocos2DTestAppDelegate.m; sourceTree = "<group>"; };
 		1D6058910D05DD3D006BFB54 /* Cocos2DTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cocos2DTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -767,6 +769,7 @@
 				AD7E03BA0FE9734B0000E41C /* UIKit.framework in Frameworks */,
 				AD7E04450FE973A80000E41C /* GameKit.framework in Frameworks */,
 				0EF03E7D102D0D04003FC1E8 /* libcocosdenshion.a in Frameworks */,
+				0EF03EA1102D19B5003FC1E8 /* libisimulate.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1021,6 +1024,7 @@
 		0E043A27102B10F600827BEE /* external */ = {
 			isa = PBXGroup;
 			children = (
+				0EF03EA0102D19B5003FC1E8 /* libisimulate.a */,
 				0E043A28102B10F600827BEE /* Box2d */,
 				0E043A8C102B10F600827BEE /* Chipmunk */,
 				0E043ABA102B10F600827BEE /* TouchJSON */,
@@ -2087,6 +2091,11 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Other Sources/Cocos2DTest.pch";
 				INFOPLIST_FILE = "Resources/Cocos2DTest-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/Support/external\"",
+				);
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = Cocos2DTest;
 			};
 			name = Debug;
@@ -2100,6 +2109,11 @@
 				GCC_PREFIX_HEADER = "Other Sources/Cocos2DTest.pch";
 				INFOPLIST_FILE = "Resources/Cocos2DTest-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 3.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/Support/external\"",
+				);
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = Cocos2DTest;
 			};
 			name = Release;
